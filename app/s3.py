@@ -14,8 +14,16 @@ AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 
 s3 = boto3.client("s3", region_name=AWS_REGION)
 
+import boto3
+try:
+    who = boto3.client("sts").get_caller_identity()
+    print("AWS Identity:", who)
+    print("USING BUCKET:", S3_BUCKET, "REGION:", AWS_REGION)
+except Exception as e:
+    print("STS identity check failed:", e)
+
 def _key(rel: str) -> str:
-    return f"{rel}"
+    return f"env/{ENV}/{rel}"
 
 def get_json(key_rel: str):
     obj = s3.get_object(Bucket=S3_BUCKET, Key=_key(key_rel))
