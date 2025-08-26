@@ -1,31 +1,36 @@
-# app/routers/dashboard.py
 from fastapi import APIRouter
-from datetime import date
-from app.s3 import get_courses, get_assignments
+from app.s3 import get_profile
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("")
-def dashboard():
-    courses = get_courses()
-    assigns = get_assignments()
-    completed = [a for a in assigns if a.get("status") == "Completed"]
-    ongoing = [a for a in assigns if a.get("status") == "Ongoing"]
-
-    sum_w = sum((c.get("gradePoints") or 0) * c.get("creditUnits", 0) for c in courses)
-    sum_c = sum(c.get("creditUnits", 0) for c in courses if c.get("gradePoints") is not None)
-    cgpa = round(sum_w / sum_c, 2) if sum_c else 0.0
-
-    today = date.today().isoformat()
-    upcoming = sorted([a for a in ongoing if a.get("dueDate") and a["dueDate"] >= today],
-                      key=lambda x: x["dueDate"])
-    next_due = upcoming[0] if upcoming else None
+def overview():
+    """3-panel dashboard data straight from profile.json."""
+    p = get_profile() or {}
 
     return {
-        "totalCourses": len(courses),
-        "completedAssignments": len(completed),
-        "ongoingAssignments": len(ongoing),
-        "currentCgpa": cgpa,
-        "upcomingDueCount": len(upcoming),
-        "nextDue": next_due
+        "personal": {
+            "name": p.get("personal", {}).get("name", ""),
+            "id": p.get("personal", {}).get("id", ""),
+            "phone": p.get("personal", {}).get("phone", ""),
+            "email": p.get("personal", {}).get("email", ""),
+        },
+        "degreeProgress": {
+            "bachelors": p.get("degreeProgress", {}).get("bachelors", ""),
+            "discipline": p.get("degreeProgress", {}).get("discipline", ""),
+            "joinDate": p.get("degreeProgress", {}).get("joinDate", ""),
+        },
+        "graduation": {
+            "email": p.get("graduation", {}).get("email", ""),
+            "phone": p.get("graduation", {}).get("phone", ""),
+            "alternateEmail": p.get("graduation", {}).get("alternateEmail", ""),
+            "address": p.get("graduation", {}).get("address", ""),
+        },
+        "adminNotifications": {
+            "feePayment": p.get("adminNotifications", {}).get("feePayment", ""),
+            "lastDate": p.get("adminNotifications", {}).get("lastDate", ""),
+            "uploadCertificate": p.get("adminNotifications", {}).get("uploadCertificate", False),
+            "pendingStatus": p.get("adminNotifications", {}).get("pendingStatus", ""),
+        },
+        "transfer": p.get("transfer", []),
     }
